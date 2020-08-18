@@ -9,6 +9,9 @@ import scala.math.Pi
   */
 object Visualization extends VisualizationInterface {
 
+  val r = 6378 // radius of earth
+  val pInverseWeight = 6
+
   def areAntipodes(loc1: Location, loc2: Location): Boolean =
     loc1.lat + loc2.lat == 0 && math.abs(loc1.lon - loc2.lon) == 180d
 
@@ -31,13 +34,13 @@ object Visualization extends VisualizationInterface {
     * @return The predicted temperature at `location`
     */
   def predictTemperature(temperatures: Iterable[(Location, Temperature)], location: Location): Temperature = {
-    val found = temperatures.find(x ⇒ (6378 * distance(location, x._1)) <= 1).map(_._2)
+    val found = temperatures.find(x ⇒ (r * distance(location, x._1)) <= 1).map(_._2)
 
     found.getOrElse {
       val (weightedTempSum, weightSum) = temperatures
         .map {
-          case (p, temperature) ⇒
-            val weight = 1.0 / math.pow(distance(p, location), 2)
+          case (point, temperature) ⇒
+            val weight = 1.0 / math.pow(distance(point, location), pInverseWeight)
             (temperature * weight, weight)
         }
         .reduce[(Double, Double)] {
@@ -88,7 +91,7 @@ object Visualization extends VisualizationInterface {
     val pixels = cords.par.map { case (lat, lon) ⇒
       val temp  = predictTemperature(temperatures, Location(lat, lon))
       val color = interpolateColor(colors,         temp)
-      Pixel(color.red, color.green, color.blue, 255)
+      Pixel(color.red, color.green, color.blue, 127)
     }.toArray
     Image(360, 180, pixels)
   }

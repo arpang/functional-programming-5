@@ -100,8 +100,6 @@ object Test {
 //    println(Visualization.predictTemperature(second, Location(5D, 5D)))
 //    println(second.head._1, second.head._2)
 //    println(Visualization.visualize(second, Location(90, -180)))
-
-
     val list = List(
       (60d,  Color(255, 255, 255)),
       (32d,  Color(255, 0,   0)),
@@ -114,9 +112,6 @@ object Test {
     )
     val third = Visualization.visualize(second, list)
     println(third.metadata)
-
-
-
 //    println(Visualization.interpolateColor(List((0.0,Color(255,0,0)), (1.52587890625E-5,Color(0,0,255))), 0.0)
   }
 }
