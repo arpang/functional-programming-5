@@ -89,7 +89,6 @@ object Extraction extends ExtractionInterface {
       .agg(
         typed.avg(_._2)
       )
-      .persist()
   }
 }
 
@@ -100,18 +99,21 @@ object Test {
 //    println(Visualization.predictTemperature(second, Location(5D, 5D)))
 //    println(second.head._1, second.head._2)
 //    println(Visualization.visualize(second, Location(90, -180)))
-    val list = List(
-      (60d,  Color(255, 255, 255)),
-      (32d,  Color(255, 0,   0)),
-      (12d,  Color(255, 255, 0)),
-      (0d,   Color(0,   255, 255)),
-      (-15d, Color(0,   0,   255)),
-      (-27d, Color(255, 0,   255)),
-      (-50d, Color(33,  0,   107)),
-      (-60d, Color(0,   0,   0))
-    )
-    val third = Visualization.visualize(second, list)
-    println(third.metadata)
+//    val list = List(
+//      (60d,  Color(255, 255, 255)),
+//      (32d,  Color(255, 0,   0)),
+//      (12d,  Color(255, 255, 0)),
+//      (0d,   Color(0,   255, 255)),
+//      (-15d, Color(0,   0,   255)),
+//      (-27d, Color(255, 0,   255)),
+//      (-50d, Color(33,  0,   107)),
+//      (-60d, Color(0,   0,   0))
+//    )
+//    val third = Visualization.visualize(second, list)
+//    println(third.metadata)
 //    println(Visualization.interpolateColor(List((0.0,Color(255,0,0)), (1.52587890625E-5,Color(0,0,255))), 0.0)
+
+    val fourth = Manipulation.makeGrid(second)
+    println(fourth(GridLocation(0, 0)))
   }
 }

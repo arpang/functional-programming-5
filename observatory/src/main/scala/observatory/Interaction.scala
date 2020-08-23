@@ -1,5 +1,7 @@
 package observatory
 
+import java.io.File
+
 import com.sksamuel.scrimage.{Image, Pixel}
 
 import math._
@@ -10,6 +12,8 @@ import Visualization._
   * 3rd milestone: interactive visualization
   */
 object Interaction extends InteractionInterface {
+  val power = 8
+  val multiplier = math.pow(2, power).toInt
 
   def locationToIndex(loc: Location): (Int, Int) = {
     val lat = loc.lat
@@ -22,12 +26,13 @@ object Interaction extends InteractionInterface {
 
   def tilePixels(tile: Tile): ParSeq[Tile] = {
     val cords = for {
-      j ← 256 * tile.y until 256 * (tile.y + 1)
-      i ← 256 * tile.x until 256 * (tile.x + 1)
+      j ← multiplier * tile.y until multiplier * (tile.y + 1)
+      i ← multiplier * tile.x until multiplier * (tile.x + 1)
     } yield (i, j)
 
-    cords.par.map { case (i, j) ⇒
-      Tile(i, j, tile.zoom + 8)
+    cords.par.map {
+      case (i, j) ⇒
+        Tile(i, j, tile.zoom + power)
     }
   }
 
@@ -37,8 +42,9 @@ object Interaction extends InteractionInterface {
       i ← 2 * tile.x until 2 * (tile.x + 1)
     } yield (i, j)
 
-    cords.map { case (i, j) ⇒
-      Tile(i, j, tile.zoom + 1)
+    cords.map {
+      case (i, j) ⇒
+        Tile(i, j, tile.zoom + 1)
     }.toList
   }
 
@@ -47,8 +53,8 @@ object Interaction extends InteractionInterface {
     * @return The latitude and longitude of the top-left corner of the tile, as per http://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
     */
   def tileLocation(tile: Tile): Location = {
-    val lon = (tile.x * 360)/pow(2, tile.zoom) - 180
-    val lat = atan(sinh(Pi - (2 * Pi * tile.y)/pow(2, tile.zoom))) * 180/Pi
+    val lon = (tile.x * 360) / pow(2, tile.zoom) - 180
+    val lat = atan(sinh(Pi - (2 * Pi * tile.y) / pow(2, tile.zoom))) * 180 / Pi
     Location(lat, lon)
   }
 
@@ -58,13 +64,18 @@ object Interaction extends InteractionInterface {
     * @param tile Tile coordinates
     * @return A 256×256 image showing the contents of the given tile
     */
-  def tile(temperatures: Iterable[(Location, Temperature)], colors: Iterable[(Temperature, Color)], tile: Tile): Image = {
-    val pixels = tilePixels(tile).map(tileLocation)
+  def tile(
+    temperatures: Iterable[(Location, Temperature)],
+    colors:       Iterable[(Temperature, Color)],
+    tile:         Tile
+  ): Image = {
+    val pixels = tilePixels(tile)
+      .map(tileLocation)
       .map(predictTemperature(temperatures, _))
       .map(interpolateColor(colors, _))
-      .map(col => Pixel(col.red, col.green, col.blue, 127))
+      .map(col ⇒ Pixel(col.red, col.green, col.blue, 127))
       .toArray
-    Image(256, 256, pixels)
+    Image(multiplier, multiplier, pixels).scale(256/multiplier)
   }
 
   /**
@@ -75,19 +86,49 @@ object Interaction extends InteractionInterface {
     *                      y coordinates of the tile and the data to build the image from
     */
   def generateTiles[Data](
-    yearlyData: Iterable[(Year, Data)],
-    generateImage: (Year, Tile, Data) => Unit
+    yearlyData:    Iterable[(Year, Data)],
+    generateImage: (Year, Tile, Data) ⇒ Unit
   ): Unit = {
-    val zero = Tile(0, 0, 0)
-    val first = zoom(zero)
+    val zero   = Tile(0, 0, 0)
+    val first  = zoom(zero)
     val second = first.flatMap(zoom)
-    val third = second.flatMap(zoom)
-    val all = zero :: first ++ second ++ third
+    val third  = second.flatMap(zoom)
+    val all    = zero :: first ++ second ++ third
     for {
-      tile ← all
-      (year, data) ← yearlyData
+      tile ← all.par
+      (year, data) ← yearlyData.par
     } generateImage(year, tile, data)
-
   }
 
+  def generateImageImplementation(year: Year, tile: Tile, data: Iterable[(Location, Temperature)]): Unit = {
+    val colors: List[(Temperature, Color)] = List(
+      (60d,  Color(255, 255, 255)),
+      (32d,  Color(255, 0,   0)),
+      (12d,  Color(255, 255, 0)),
+      (0d,   Color(0,   255, 255)),
+      (-15d, Color(0,   0,   255)),
+      (-27d, Color(255, 0,   255)),
+      (-50d, Color(33,  0,   107)),
+      (-60d, Color(0,   0,   0))
+    )
+    val image = this.tile(data, colors, tile)
+    val path = s"target/temperatures/$year/${tile.zoom}/${tile.x}-${tile.y}.png"
+    val file = new File(path)
+    file.getParentFile.mkdirs()
+    image.output(file)
+  }
+
+  def main(args: Array[String]): Unit = {
+    val yearlyData = for {
+      year ← 1975 to 2015
+    } yield {
+      println("Computing data for year: " + year)
+      val first  = Extraction.locateTemperatures(year, "/stations.csv", s"/$year.csv")
+      (year, Extraction.locationYearlyAverageRecords(first))
+    }
+    generateTiles(yearlyData.seq, generateImageImplementation)
+  }
 }
+
+
+

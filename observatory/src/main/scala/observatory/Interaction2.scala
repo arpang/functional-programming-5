@@ -9,16 +9,39 @@ object Interaction2 extends Interaction2Interface {
     * @return The available layers of the application
     */
   def availableLayers: Seq[Layer] = {
-    ???
+    val tempYearRange = 1975 to 2015
+    val tempScale = List(
+      (60d,  Color(255, 255, 255)),
+      (32d,  Color(255, 0,   0)),
+      (12d,  Color(255, 255, 0)),
+      (0d,   Color(0,   255, 255)),
+      (-15d, Color(0,   0,   255)),
+      (-27d, Color(255, 0,   255)),
+      (-50d, Color(33,  0,   107)),
+      (-60d, Color(0,   0,   0))
+    )
+    val tempLayer = Layer(LayerName.Temperatures, tempScale, tempYearRange)
+
+    val deviationYearRange = 1991 to 2015
+    val deviationScale = List(
+      (7d,  Color(0,   0,   0)),
+      (4d,  Color(255, 0,   0)),
+      (2d,  Color(255, 255, 0)),
+      (0d,  Color(255, 255, 255)),
+      (-2d, Color(0,   255, 255)),
+      (-7d, Color(0,   0,   255))
+    )
+    val deviationLayer = Layer(LayerName.Deviations, deviationScale, deviationYearRange)
+
+    Seq(deviationLayer, tempLayer)
   }
 
   /**
     * @param selectedLayer A signal carrying the layer selected by the user
     * @return A signal containing the year bounds corresponding to the selected layer
     */
-  def yearBounds(selectedLayer: Signal[Layer]): Signal[Range] = {
-    ???
-  }
+  def yearBounds(selectedLayer: Signal[Layer]): Signal[Range] =
+    Signal(selectedLayer().bounds)
 
   /**
     * @param selectedLayer The selected layer
@@ -29,7 +52,12 @@ object Interaction2 extends Interaction2Interface {
     *         in the `selectedLayer` bounds.
     */
   def yearSelection(selectedLayer: Signal[Layer], sliderValue: Signal[Year]): Signal[Year] = {
-    ???
+    val range = yearBounds(selectedLayer)
+    Signal(
+    if (range() contains sliderValue()) sliderValue()
+    else if (range().start > sliderValue()) range().head
+    else range().last
+    )
   }
 
   /**
@@ -38,7 +66,7 @@ object Interaction2 extends Interaction2Interface {
     * @return The URL pattern to retrieve tiles
     */
   def layerUrlPattern(selectedLayer: Signal[Layer], selectedYear: Signal[Year]): Signal[String] = {
-    ???
+    Signal("target/" + selectedLayer().layerName.id + "/" + selectedYear() + "/{z}/{x}-{y}.png")
   }
 
   /**
@@ -46,9 +74,8 @@ object Interaction2 extends Interaction2Interface {
     * @param selectedYear The selected year
     * @return The caption to show
     */
-  def caption(selectedLayer: Signal[Layer], selectedYear: Signal[Year]): Signal[String] = {
-    ???
-  }
+  def caption(selectedLayer: Signal[Layer], selectedYear: Signal[Year]): Signal[String] =
+    Signal(selectedLayer().layerName.id.capitalize + " (" + selectedYear() + ")")
 
 }
 
@@ -56,10 +83,10 @@ object Interaction2 extends Interaction2Interface {
 // or your submission will fail with a NoSuchMethodError.
 trait Interaction2Interface {
   def availableLayers: Seq[Layer]
-  def yearBounds(selectedLayer: Signal[Layer]): Signal[Range]
-  def yearSelection(selectedLayer: Signal[Layer], sliderValue: Signal[Year]): Signal[Year]
+  def yearBounds(selectedLayer:      Signal[Layer]): Signal[Range]
+  def yearSelection(selectedLayer:   Signal[Layer], sliderValue: Signal[Year]): Signal[Year]
   def layerUrlPattern(selectedLayer: Signal[Layer], selectedYear: Signal[Year]): Signal[String]
-  def caption(selectedLayer: Signal[Layer], selectedYear: Signal[Year]): Signal[String]
+  def caption(selectedLayer:         Signal[Layer], selectedYear: Signal[Year]): Signal[String]
 }
 
 sealed abstract class LayerName(val id: String)
@@ -74,4 +101,3 @@ object LayerName {
   * @param bounds Minimum and maximum year supported by the layer
   */
 case class Layer(layerName: LayerName, colorScale: Seq[(Temperature, Color)], bounds: Range)
-
