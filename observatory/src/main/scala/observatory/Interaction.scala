@@ -5,24 +5,15 @@ import java.io.File
 import com.sksamuel.scrimage.{Image, Pixel}
 
 import math._
-import scala.collection.parallel.ParSeq
+import scala.collection.parallel.{ForkJoinTaskSupport, ParSeq}
 import Visualization._
 
 /**
   * 3rd milestone: interactive visualization
   */
 object Interaction extends InteractionInterface {
-  val power = 8
+  val power = 7
   val multiplier = math.pow(2, power).toInt
-
-  def locationToIndex(loc: Location): (Int, Int) = {
-    val lat = loc.lat
-    val lon = loc.lon
-
-    val i = (lon + 180).round.toInt
-    val j = (90 - lat).round.toInt
-    (i, j)
-  }
 
   def tilePixels(tile: Tile): ParSeq[Tile] = {
     val cords = for {
@@ -119,14 +110,18 @@ object Interaction extends InteractionInterface {
   }
 
   def main(args: Array[String]): Unit = {
+    val years = (1975 to 2015).par
+    years.tasksupport = new ForkJoinTaskSupport(new scala.concurrent.forkjoin.ForkJoinPool(2))
+
     val yearlyData = for {
-      year ← 1975 to 2015
+      year ← years
     } yield {
       println("Computing data for year: " + year)
       val first  = Extraction.locateTemperatures(year, "/stations.csv", s"/$year.csv")
       (year, Extraction.locationYearlyAverageRecords(first))
     }
     generateTiles(yearlyData.seq, generateImageImplementation)
+    println("Done")
   }
 }
 
