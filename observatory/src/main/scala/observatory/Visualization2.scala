@@ -2,9 +2,11 @@ package observatory
 
 import java.io.File
 
-import com.sksamuel.scrimage.{Image,           Pixel}
-import observatory.Interaction.{generateTiles, multiplier, tileLocation, tilePixels}
+import com.sksamuel.scrimage.{Image, Pixel}
+import observatory.Interaction.{multiplier, tileLocation, tilePixels}
 import observatory.Visualization.interpolateColor
+
+import scala.collection.parallel.{ForkJoinTaskSupport, ForkJoinTasks}
 
 /**
   * 5th milestone: value-added information visualization
@@ -85,19 +87,25 @@ object Visualization2 extends Visualization2Interface {
   }
 
   def main(args: Array[String]): Unit = {
+    val parallelism = 2
+    val normalYears = (1975 to 1990).par
+    normalYears.tasksupport = new ForkJoinTaskSupport(new scala.concurrent.forkjoin.ForkJoinPool(parallelism))
+
     val temperaturess = for {
-      year ← 1975 to 1975
+      year ← normalYears
     } yield {
-      println("Computing data for year: " + year)
+      println("Computing avg for year: " + year)
       val yearData = Extraction.locateTemperatures(year, "/stations.csv", s"/$year.csv")
       Extraction.locationYearlyAverageRecords(yearData)
     }
-    val normals = Manipulation.average(temperaturess)
+    val normals = Manipulation.average(temperaturess.seq)
 
+    val deviationYears = 1991 to 2015
+//    deviationYears.tasksupport = new ForkJoinTaskSupport(new scala.concurrent.forkjoin.ForkJoinPool(parallelism))
     val yearlyGrids = for {
-      year ← 2015 to 2015
+      year ← deviationYears
     } yield {
-      println("Computing data for year: " + year)
+      println("Computing grid for year: " + year)
       val yearData = Extraction.locateTemperatures(year, "/stations.csv", s"/$year.csv")
       val avgData  = Extraction.locationYearlyAverageRecords(yearData)
       (year, Manipulation.deviation(avgData, normals))

@@ -12,8 +12,8 @@ object Manipulation extends ManipulationInterface {
     */
   def makeGrid(temperatures: Iterable[(Location, Temperature)]): GridLocation => Temperature = {
     val preComputed = (for {
-      lat ← (90 until (-90, -1)).par
-      lon ← (-180 until 180).par
+      lat ← (90 until (-90, -3)).par
+      lon ← (-180 until (180, 3)).par
     } yield {
       val gridLocation = GridLocation(lat, lon)
       val location = Location(lat.toDouble, lon.toDouble)
@@ -35,8 +35,8 @@ object Manipulation extends ManipulationInterface {
     } yield makeGrid(temperatures)
 
     val preComputed = (for {
-      lat ← (90 until (-90, -1)).par
-      lon ← (-180 until 180).par
+      lat ← (90 until (-90, -3)).par
+      lon ← (-180 until (180,3)).par
     } yield {
       val gridLocation = GridLocation(lat, lon)
       val avgTemp = grids.map(grid ⇒ grid(gridLocation)).sum / num
@@ -55,8 +55,8 @@ object Manipulation extends ManipulationInterface {
     val grid = makeGrid(temperatures)
 
     val preComputed = (for {
-      lat ← (90 until (-90, -1)).par
-      lon ← (-180 until 180).par
+      lat ← (90 until (-90, -3)).par
+      lon ← (-180 until (180, 3)).par
     } yield {
       val gridLocation = GridLocation(lat, lon)
       val curValue = grid(gridLocation)
@@ -64,7 +64,14 @@ object Manipulation extends ManipulationInterface {
       gridLocation → (curValue - normalValue)
     }).toMap.seq
 
-    gridLocation: GridLocation ⇒ preComputed(gridLocation)
+    gridLocation: GridLocation ⇒ {
+      val lon = gridLocation.lon
+      val lat = gridLocation.lat
+
+      val newLat = ((lat/3D).ceil*3).toInt
+      val newLon = ((lon/3D).floor*3).toInt
+      preComputed.getOrElse(GridLocation(newLat, newLon), 0D)
+    }
   }
 
 
